@@ -20,6 +20,7 @@ df.to_csv("data.csv", index=False)
 df = df.drop(columns=['snow', 'wdir', 'wpgt', 'tsun'], errors='ignore')
 df = df.dropna(subset=['pm25'])
 
+features = ['tavg', 'tmin', 'tmax', 'prcp', 'wspd', 'pres']
 
 
 print(df.describe())
