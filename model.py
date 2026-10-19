@@ -11,6 +11,7 @@ from sklearn.model_selection import cross_val_score, KFold
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import GridSearchCV
+import joblib
 
 df_weather = pd.read_csv("weather-data.csv")
 df_weather["date"] = pd.to_datetime(df_weather["date"])
@@ -49,32 +50,36 @@ test = df[df["date"] >= "2024-01-01"]
 X_train, y_train = train[features], train["pm25"]
 X_test, y_test = test[features], test["pm25"]
 
-forest = RandomForestRegressor(n_estimators=500, max_depth=5, min_samples_leaf=5, random_state=42)
 
-forest.fit(X_train, y_train)
+final_forest = RandomForestRegressor(n_estimators=500, max_depth=5, min_samples_leaf=5, random_state=42)
+final_forest.fit(X, y)
+joblib.dump(final_forest, "model.pkl")
+
+#forest = RandomForestRegressor(n_estimators=500, max_depth=5, min_samples_leaf=5, random_state=42)
+#forest.fit(X_train, y_train)
 #print(pd.Series(forest.feature_importances_, index=features).sort_values(ascending=False))
 
-forest_prediction = forest.predict(X_test)
+#forest_prediction = forest.predict(X_test)
 
-cv = TimeSeriesSplit(n_splits=5)
-fcross = cross_val_score(forest, X, y, cv=cv, scoring="r2")
-print("Cross-val scores:")
-print(fcross, " ", fcross.mean())
+#cv = TimeSeriesSplit(n_splits=5)
+#fcross = cross_val_score(forest, X, y, cv=cv, scoring="r2")
+#print("Cross-val scores:")
+#print(fcross, " ", fcross.mean())
 
-fscore = r2_score(y_test, forest_prediction)
-print("R2 scores:")
-print(fscore)
+#fscore = r2_score(y_test, forest_prediction)
+#print("R2 scores:")
+#print(fscore)
 
-baseline = np.full(len(y_test), y_train.mean())
-print("baseline", mean_absolute_error(y_test, baseline))
-print(mean_absolute_error(y_test, forest_prediction))
+#baseline = np.full(len(y_test), y_train.mean())
+#print("baseline", mean_absolute_error(y_test, baseline))
+#print(mean_absolute_error(y_test, forest_prediction))
 #print(df.describe())
 
-param_grid = {
-    "max_depth": [2, 3, 4, 5, 6, 7, 8, 9],
-    "min_samples_leaf": [1, 5, 10, 20],
-    "n_estimators": [100, 200, 300, 400, 500],
-}
+#param_grid = {
+#    "max_depth": [2, 3, 4, 5, 6, 7, 8, 9],
+#    "min_samples_leaf": [1, 5, 10, 20],
+#    "n_estimators": [100, 200, 300, 400, 500],
+#}
 #grid = GridSearchCV(RandomForestRegressor(random_state=42), param_grid, cv=cv, scoring="r2", n_jobs=-1)
 #grid.fit(X_train, y_train)
 #print(grid.best_params_)
