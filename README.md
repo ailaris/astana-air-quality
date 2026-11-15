@@ -1,12 +1,20 @@
 # Predicting Astana air quality from weather
 
-It's a regression model that estimates the daily air quality index (AQI, based on PM2.5) in Astana from daily weather. The question was how much of the day-to-day variation weather alone can explain. On a test year the model never saw (2024), the best model explains about 42% of the variation and cuts the typical error by about a quarter compared with guessing the average.
+**Live demo: https://astana-air-quality.streamlit.app**
+
+This project is a regression model that estimates the daily air quality index (AQI, based on PM2.5) in Astana from daily weather. The question was how much of the day-to-day variation weather alone can explain. On a test year the model never saw (2024), the best model explains about 42% of the variation and cuts the typical error by about a quarter compared with guessing the average.
+
+## Demo app
+
+The Streamlit app estimates the AQI for a day you choose. You can fetch today's weather for Astana with one click, or type the minimum and maximum temperature, average wind speed, sea-level pressure and month yourself. The app returns the estimated AQI, its US AQI category with an emoji and a short recommendation, and the typical error. It runs in English, Russian and Kazakh.
+
+The live weather comes from Open-Meteo forecasts, while the model learned from Meteostat station data, so the two sources differ slightly and add some noise. The model saved in `model.pkl` is trained on all years from 2019 to 2024. The scores below come from the version trained on years before 2024.
 
 ## Results
 
 Test set: all of 2024 (327 days). Training set: 2019 to 2023 (1587 days).
 
-| Model | R2 on 2024 | Mean cross-validated R2 | MAE on 2024 |
+| Model | R² on 2024 | Mean cross-validated R² | MAE on 2024 |
 |---|---|---|---|
 | Random forest (500 trees, max_depth 5, min_samples_leaf 5) | 0.420 | 0.241 | 15.74 AQI points |
 | Linear regression | 0.395 | 0.223 | not measured |
@@ -31,7 +39,7 @@ Cross-validation uses `TimeSeriesSplit` with 5 folds. The first fold trains on a
 - **Features:** `tmin`, `tmax`, `wspd`, `pres`, plus the month encoded as a sine and a cosine, so December and January sit next to each other.
 - **Split:** chronological. Neighbouring days look alike, so a random split lets the model see near-copies of its test days. I train on the past and test on a later year.
 - **Models:** random forest and linear regression. I also trained a single decision tree and dropped it (see below).
-- **Tuning:** `GridSearchCV` over `max_depth`, `min_samples_leaf` and `n_estimators`, scored with `TimeSeriesSplit`. The best setting was depth 5, leaf size 5, 300 trees. I use 500 trees, which scored the same (cross-validated R2 0.2406 vs 0.2404).
+- **Tuning:** `GridSearchCV` over `max_depth`, `min_samples_leaf` and `n_estimators`, scored with `TimeSeriesSplit`. The best setting was depth 5, leaf size 5, 300 trees. I use 500 trees, which scored the same (cross-validated R² 0.2406 vs 0.2404).
 
 ## Experiment log
 
@@ -57,12 +65,15 @@ The depth-3 forest scored higher on 2024 (0.469) than the final model (0.420). I
 - **Day of the week does not matter here.** Average AQI by weekday ranged from 56.8 to 58.9, so I added no weekday feature.
 - **Extra features did not help.** The 3-day average wind and the daily pressure change left the scores within noise (about ±0.02), and precipitation had near-zero importance. I removed all three.
 - **The forest edges out linear regression.** It leads on 2024 (0.420 vs 0.395), and the two are close in cross-validation (0.241 vs 0.223). The relationship between these weather inputs and AQI looks simple. The single decision tree overfit and scored between 0.21 and 0.34 depending on the features.
+- **Inputs must match training.** My first live-weather version fed the app the daily maximum wind and surface pressure, while the model was trained on average wind and sea-level pressure. Estimates came out too clean until I switched to the matching daily means.
 
 ## Limitations
 
 - Weather explains part of the variation. Heating, traffic and industry are not in the features, which is why R² stays well below 1.
+- The model averages similar past days, so it rarely predicts the most extreme smog days and tends to underestimate the worst ones.
 - The test set is one year from one monitor. January to April 2023 is missing, so one winter is absent from training and cross-validation.
 - I chose features and early settings while looking at the 2024 score, so 0.42 may be higher than the model would score on a new year.
+- The app's live weather comes from a forecast model, not from the station the model was trained on.
 - AQI is a nonlinear scale. Compare these numbers with other AQI models only.
 - The aqicn data is not validated. This project is a demo and not a health tool.
 
@@ -80,14 +91,15 @@ Download the daily history for "Nur-Sultan, US Embassy" from the aqicn.org histo
 uv run model.py
 ```
 
-The script merges the two files, trains the models and prints the scores.
+The script merges the two files, trains the models, prints the scores, and saves the final forest to `model.pkl`. To launch the app locally, run:
+
+```bash
+uv run streamlit run app.py
+```
 
 ## Data credits
 
 - Weather: [Meteostat](https://meteostat.net).
+- Live weather in the app: [Open-Meteo](https://open-meteo.com), licensed CC BY 4.0.
 - Air quality: US Embassy monitor data from the originating EPA/AirNow network, distributed by the [World Air Quality Index project](https://aqicn.org). Their terms state that the data is not fully verified or validated and is not official. The terms also forbid redistributing it as an archive, so the CSV is not in this repo.
 - First-attempt air quality export: [OpenAQ](https://openaq.org).
-
-## Status
-
-The Streamlit app is in progress. It takes minimum and maximum temperature, wind speed, pressure and the month, and returns an estimated AQI with the typical error shown next to it.
